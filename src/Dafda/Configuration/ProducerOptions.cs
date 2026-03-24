@@ -1,7 +1,6 @@
 using System;
 using Dafda.Producing;
 using Dafda.Serializing;
-using Microsoft.Extensions.Logging;
 
 namespace Dafda.Configuration
 {
@@ -10,14 +9,8 @@ namespace Dafda.Configuration
     /// </summary>
     public sealed class ProducerOptions
     {
-        private readonly ProducerConfigurationBuilder _builder;
-        private readonly OutgoingMessageRegistry _outgoingMessageRegistry;
-
-        internal ProducerOptions(ProducerConfigurationBuilder builder, OutgoingMessageRegistry outgoingMessageRegistry)
-        {
-            _builder = builder;
-            _outgoingMessageRegistry = outgoingMessageRegistry;
-        }
+        internal readonly ProducerConfigurationBuilder Builder = new();
+        internal readonly OutgoingMessageRegistry OutgoingMessageRegistry = new();
 
         /// <summary>
         /// Specify a custom implementation of the <see cref="ConfigurationSource"/> to use. 
@@ -25,7 +18,7 @@ namespace Dafda.Configuration
         /// <param name="configurationSource">The <see cref="ConfigurationSource"/> to use.</param>
         public void WithConfigurationSource(ConfigurationSource configurationSource)
         {
-            _builder.WithConfigurationSource(configurationSource);
+            Builder.WithConfigurationSource(configurationSource);
         }
 
         /// <summary>
@@ -34,7 +27,7 @@ namespace Dafda.Configuration
         /// <param name="configuration">The configuration instance.</param>
         public void WithConfigurationSource(Microsoft.Extensions.Configuration.IConfiguration configuration)
         {
-            _builder.WithConfigurationSource(new DefaultConfigurationSource(configuration));
+            Builder.WithConfigurationSource(new DefaultConfigurationSource(configuration));
         }
 
         /// <summary>
@@ -44,7 +37,7 @@ namespace Dafda.Configuration
         /// <param name="converter">Use this to transform keys.</param>
         public void WithNamingConvention(Func<string, string> converter)
         {
-            _builder.WithNamingConvention(converter);
+            Builder.WithNamingConvention(converter);
         }
 
         /// <summary>
@@ -63,7 +56,7 @@ namespace Dafda.Configuration
         /// <param name="additionalPrefixes">Additional prefixes to use before keys.</param>
         public void WithEnvironmentStyle(string prefix = null, params string[] additionalPrefixes)
         {
-            _builder.WithEnvironmentStyle(prefix, additionalPrefixes);
+            Builder.WithEnvironmentStyle(prefix, additionalPrefixes);
         }
 
         /// <summary>
@@ -73,7 +66,7 @@ namespace Dafda.Configuration
         /// <param name="value">The configuration value.</param>
         public void WithConfiguration(string key, string value)
         {
-            _builder.WithConfiguration(key, value);
+            Builder.WithConfiguration(key, value);
         }
 
         /// <summary>
@@ -82,12 +75,12 @@ namespace Dafda.Configuration
         /// <param name="bootstrapServers">A list of bootstrap servers.</param>
         public void WithBootstrapServers(string bootstrapServers)
         {
-            _builder.WithBootstrapServers(bootstrapServers);
+            Builder.WithBootstrapServers(bootstrapServers);
         }
 
-        internal void WithKafkaProducerFactory(Func<ILoggerFactory, KafkaProducer> inlineFactory)
+        internal void WithKafkaProducerFactory(Func<IServiceProvider, KafkaProducer> inlineFactory)
         {
-            _builder.WithKafkaProducerFactory(inlineFactory);
+            Builder.WithKafkaProducerFactory(inlineFactory);
         }
 
         /// <summary>
@@ -96,7 +89,7 @@ namespace Dafda.Configuration
         /// <param name="messageIdGenerator">A custom implementation of <see cref="MessageIdGenerator"/>.</param>
         public void WithMessageIdGenerator(MessageIdGenerator messageIdGenerator)
         {
-            _builder.WithMessageIdGenerator(messageIdGenerator);
+            Builder.WithMessageIdGenerator(messageIdGenerator);
         }
 
         /// <summary>
@@ -109,7 +102,7 @@ namespace Dafda.Configuration
         /// and returns a string of the Kafka partition key.</param>
         public void Register<T>(string topic, string type, Func<T, string> keySelector) where T : class
         {
-            _outgoingMessageRegistry.Register(topic, type, keySelector);
+            OutgoingMessageRegistry.Register(topic, type, keySelector);
         }
 
         /// <summary>
@@ -129,7 +122,7 @@ namespace Dafda.Configuration
         /// </param>
         public void WithDefaultPayloadSerializer(Func<IPayloadSerializer> payloadSerializerFactory)
         {
-            _builder.WithDefaultPayloadSerializer(payloadSerializerFactory);
+            Builder.WithDefaultPayloadSerializer(payloadSerializerFactory);
         }
 
         /// <summary>
@@ -153,21 +146,15 @@ namespace Dafda.Configuration
         /// </param>
         public void WithPayloadSerializer(string topic, Func<IPayloadSerializer> payloadSerializerFactory)
         {
-            _builder.WithPayloadSerializer(topic, payloadSerializerFactory);
+            Builder.WithPayloadSerializer(topic, payloadSerializerFactory);
         }
 
-        private class DefaultConfigurationSource : ConfigurationSource
+        private class DefaultConfigurationSource(Microsoft.Extensions.Configuration.IConfiguration configuration)
+            : ConfigurationSource
         {
-            private readonly Microsoft.Extensions.Configuration.IConfiguration _configuration;
-
-            public DefaultConfigurationSource(Microsoft.Extensions.Configuration.IConfiguration configuration)
-            {
-                _configuration = configuration;
-            }
-
             public override string GetByKey(string key)
             {
-                return _configuration[key];
+                return configuration[key];
             }
         }
     }
